@@ -1,0 +1,4 @@
+--name-tag=readme
+--hide-tag=readme
+--query "has_tag?(:readme)"
+--files LICENSE.txt

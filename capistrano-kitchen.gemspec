@@ -1,16 +1,16 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'capistrano_cook/version'
+require 'capistrano_kitchen/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "capistrano-cook"
-  spec.version       = CapistranoCook::VERSION
+  spec.name          = "capistrano-kitchen"
+  spec.version       = CapistranoKitchen::VERSION
   spec.authors       = ["Donovan Bray"]
   spec.email         = ["donnoman@donovanbray.com"]
-  spec.summary       = %q{Cooking with Capistrano 3}
+  spec.summary       = %q{Everything inlcuding the Kitchen sink for cooking with Capistrano 3}
   spec.description   = %q{Ubuntu Provisioning Recipes for Capistrano 3}
-  spec.homepage      = ""
+  spec.homepage      = "http://github.com/donnoman/capistrano-kitchen"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")

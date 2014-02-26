@@ -1,5 +1,5 @@
 require 'spec_helper'
 
-describe CapistranoCook do
+describe CapistranoKitchen do
   it 'requires additional testing'
 end
