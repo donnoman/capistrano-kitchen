@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.version       = CapistranoKitchen::VERSION
   spec.authors       = ["Donovan Bray"]
   spec.email         = ["donnoman@donovanbray.com"]
-  spec.summary       = %q{Everything inlcuding the Kitchen sink for cooking with Capistrano 3}
+  spec.summary       = %q{Everything including the kitchen sink for cooking with Capistrano 3}
   spec.description   = %q{Ubuntu Provisioning Recipes for Capistrano 3}
   spec.homepage      = "http://github.com/donnoman/capistrano-kitchen"
   spec.license       = "MIT"
