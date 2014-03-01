@@ -2,14 +2,22 @@
 require File.expand_path(File.dirname(__FILE__) + '/../utilities')
 
 Capistrano::Configuration.instance(:must_exist).load do
+
   # @readme
-  # @title Bundler Integration
-  # Intelligent Bundler Handling, requires no rollbacks
+  # Intelligent Bundle Handling
   # Each release gets their own bundle seeded from the last built bundle
-  # to make the deploys faster, and the running application doesn't
-  # get its bundle changed out from under it.
+  # to make the deploys faster. The running application doesn't
+  # get its bundle changed out from under it while deploying, and rollbacks
+  # will have their original bundle already generated to fall back on to.
   namespace :bundler do
 
+    # @readme
+    # Set the options to pass to bundler
+    #
+    # Array
+    #
+    # Example
+    #    set :bundler_opts, %w(--deployment --no-color --without development)
     set :bundler_opts, %w(--deployment --no-color --quiet)
     set(:bundler_exec) { base_ruby_path + "/bin/bundle" }
     set(:bundler_dir) { "#{shared_path}/bundle" }
@@ -22,6 +30,7 @@ Capistrano::Configuration.instance(:must_exist).load do
     set :bundler_binstubs, true
     set :bundler_clean, true
     set :rake, "bundle exec rake"
+
     # @readme
     # Execute bundler install to a specific path
     #
