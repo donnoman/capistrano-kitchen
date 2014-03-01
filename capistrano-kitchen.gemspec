@@ -22,8 +22,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency "rspec", "~> 2.14.0"
   spec.add_development_dependency "yard"
-  spec.add_development_dependency "redcarpet"
-  spec.add_development_dependency "github-markup"
+  spec.add_development_dependency "yard-redcarpet-ext"
   spec.add_development_dependency "debugger"
 
   spec.add_dependency "capistrano", "~>3.0.0"

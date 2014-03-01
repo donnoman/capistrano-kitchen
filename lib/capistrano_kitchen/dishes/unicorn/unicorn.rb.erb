@@ -1,0 +1,191 @@
+# Sample verbose configuration file for Unicorn (not Rack)
+#
+# This configuration file documents many features of Unicorn
+# that may not be needed for some applications. See
+# http://unicorn.bogomips.org/examples/unicorn.conf.minimal.rb
+# for a much simpler configuration file.
+#
+# See http://unicorn.bogomips.org/Unicorn/Configurator.html for complete
+# documentation.
+
+<% if unicorn_use_syslogger %>
+  # Redirect Log to Syslog
+  # https://gist.github.com/531749
+  # add to your Gemfile:
+  #  gem 'SyslogLogger', :git => 'git@github.com:castaclip/sysloglogger.git', :require => 'syslog_logger'
+  #
+  class Syslogger
+    def initialize
+      read, @write = IO.pipe
+      fork do
+        @write.close
+        $stdin.reopen read
+        exec *%w(logger -trails)
+      end
+      read.close
+      @write.sync = true
+    end
+    def write(progname=nil, &block)
+      @write.puts "#{progname} #{block.call if block_given?}"
+    end
+    alias :debug :write
+    alias :info :write
+    alias :warn :write
+    alias :error :write
+    alias :fatal :write
+  end
+  logger Syslogger.new
+<% end %>
+
+<% if unicorn_disable_rack_attack %>
+  # This isn't a built-in to rack attack.
+  # Use something like this in your config.ru to take advantage of this parameter.
+  #
+  # Rack::Attack.throttle('req/ip', :limit => 15, :period => 3.second) do |req|
+  #   req.ip unless ENV['DISABLE_RACK_ATTACK'].present?
+  # end
+  #
+  ENV['DISABLE_RACK_ATTACK'] = '1'
+<% end %>
+
+# unicorn will stash its original command-line at startup for the USR2 upgrades, and cleaning up old revisions will cause revision-specific installations of unicorn to go missing and upgrades to fail. If you find yourself in this situation and can't afford downtime, you can override the existing unicorn executable path in the config file like this:
+# Then use HUP to reload, and then continue with the USR2+QUIT upgrade sequence.
+Unicorn::HttpServer::START_CTX[0] = "<%=current_path%>/bin/unicorn"
+
+# Use at least one worker per core if you're on a dedicated server,
+# more will usually help for _short_ waits on databases/caches.
+
+worker_processes(( workers = ENV['UNICORN_WORKERS'].to_i ) > 0 ? workers : 4)
+
+# Help ensure your application will always spawn in the symlinked
+# "current" directory that Capistrano sets up.
+# working_directory "/path/to/app/current" # available in 0.94.0+
+
+# listen on both a Unix domain socket and a TCP port,
+# we use a shorter backlog for quicker failover when busy
+# listen "/tmp/.sock", :backlog => 64
+# listen 3000, :tcp_nopush => true
+
+if File.exists?( shared_socket = <%=unicorn_socket_location%> )
+  listen shared_socket, :backlog => <%=unicorn_backlog%>, :tries => <%=unicorn_tries%>
+else
+  listen <%=unicorn_backup_socket_location%>, :backlog => <%=unicorn_backlog%>, :tries => <%=unicorn_tries%>
+end
+
+timeout <%=unicorn_timeout%>
+
+# feel free to point this anywhere accessible on the filesystem
+# pid "/path/to/app/shared/pids/unicorn.pid"
+pid File.expand_path('../../tmp/pids/unicorn.pid', __FILE__)
+
+# By default, the Unicorn logger will write to stderr.
+# Additionally, ome applications/frameworks log to stderr or stdout,
+# so prevent them from going to /dev/null when daemonized here:
+# stderr_path "/path/to/app/shared/log/unicorn.stderr.log"
+# stdout_path "/path/to/app/shared/log/unicorn.stdout.log"
+stderr_path File.expand_path('../../log/unicorn.log', __FILE__)
+stdout_path File.expand_path('../../log/unicorn.log', __FILE__)
+
+# combine REE with "preload_app true" for memory savings
+# http://rubyenterpriseedition.com/faq.html#adapt_apps_for_cow
+preload_app true
+GC.respond_to?(:copy_on_write_friendly=) and
+  GC.copy_on_write_friendly = true
+
+# sets the working directory for Unicorn.  This ensures SIGUSR2 will
+# start a new instance of Unicorn in this directory.  This may be
+# a symlink, a common scenario for Capistrano users.  Unlike
+# all other Unicorn configuration directives, this binds immediately
+# for error checking and cannot be undone by unsetting it in the
+# configuration file and reloading.
+working_directory "<%=current_path%>"
+
+# sets the before_exec hook to a given Proc object.  This
+# Proc object will be called by the master process right
+# before exec()-ing the new unicorn binary.  This is useful
+# for freeing certain OS resources that you do NOT wish to
+# share with the reexeced child process.
+# There is no corresponding after_exec hook (for obvious reasons).
+before_exec do |server|
+  ENV.each do |key,value|
+    server.logger.warn "EXEC ENV['#{key}']=#{value}" if %w(BUNDLE_BIN_PATH GEM_PATH GEM_HOME RACK_ENV PATH BUNDLE_GEMFILE USER PWD).include?(key)
+  end
+  ENV["BUNDLE_GEMFILE"] = "<%=current_path%>/Gemfile"
+end
+
+
+# sets before_fork got be a given Proc object.  This Proc
+# object will be called by the master process before forking
+# each worker.
+before_fork do |server, worker|
+  #Disconnections go in the before_fork, Reconnections should happen in the after_fork
+
+  # the following is highly recomended for Rails + "preload_app true"
+  # as there's no need for the master process to hold a connection
+  defined?(ActiveRecord::Base) and ActiveRecord::Base.connection.disconnect!
+
+  # Sequel contstants
+  defined?(DB) and DB.disconnect
+  defined?(SDB) and SDB.disconnect
+  # Riak connection via Ripple
+  Thread.current[:ripple_clent] = nil if Thread.current[:ripple_client]
+
+  #
+  # # *optionally* throttle the master from forking too quickly by sleeping
+  # sleep 1
+end
+
+# sets after_fork hook to a given block.  This block will be called by
+# the worker after forking.  The following is an example hook which adds
+# a per-process listener to every worker:
+#
+#  after_fork do |server,worker|
+#    # per-process listener ports for debugging/admin:
+#    addr = "127.0.0.1:#{9293 + worker.nr}"
+#    # the negative :tries parameter indicates we will retry forever
+#    # waiting on the existing process to exit with a 5 second :delay
+#    # Existing options for Unicorn::Configurator#listen such as
+#    # :backlog, :rcvbuf, :sndbuf are available here as well.
+#    server.listen(addr, :tries => -1, :delay => 5, :backlog => 128)
+#  end
+after_fork do |server, worker|
+  ENV.each do |key,value|
+    server.logger.info "AFTER ENV['#{key}']=#{value}" if %w(BUNDLE_BIN_PATH GEM_PATH GEM_HOME RACK_ENV PATH BUNDLE_GEMFILE PWD).include?(key)
+  end
+
+  # Redis reconnection via the Redis gem
+  # Guard against all failures including the redis server not being present at the default 127.0.0.1:6379
+  begin
+    Redis.current.client.reconnect
+  rescue
+  end
+
+  ##
+  # When sent a USR2, Unicorn will suffix its pidfile with .oldbin and
+  # immediately start loading up a new version of itself (loaded with a new
+  # version of our app). When this new Unicorn is completely loaded
+  # it will begin spawning workers. The first worker spawned will check to
+  # see if an .oldbin pidfile exists. If so, this means we've just booted up
+  # a new Unicorn and need to tell the old one that it can now die. To do so
+  # we send it a QUIT.
+  #
+  # Using this method we get 0 downtime deploys.
+
+  # wait until last worker boots to send QUIT signal
+  # next if worker.nr != (server.worker_processes - 1)
+  # wait for only half of them to ease memory constraints
+  next if worker.nr != (( server.worker_processes / 2 ) > 0 ? ( server.worker_processes / 2 ) : 1 )
+
+  old_pid = "#{server.config[:pid]}.oldbin"
+  if File.exists?(old_pid) && server.pid != old_pid
+    begin
+      Process.kill("QUIT", old_pid_number = File.read(old_pid).to_i)
+      server.logger.info "I slayed the Unicorn! with PID #{old_pid_number}"
+    rescue Errno::ENOENT, Errno::ESRCH
+      server.logger.info "Darn, PID #{old_pid_number} was already dead."
+    end
+  end
+
+end
+
+
