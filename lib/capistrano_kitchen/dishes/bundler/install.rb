@@ -2,13 +2,13 @@
 require File.expand_path(File.dirname(__FILE__) + '/../utilities')
 
 Capistrano::Configuration.instance(:must_exist).load do
-
+  # @readme
+  # @title Bundler Integration
+  # Intelligent Bundler Handling, requires no rollbacks
+  # Each release gets their own bundle seeded from the last built bundle
+  # to make the deploys faster, and the running application doesn't
+  # get its bundle changed out from under it.
   namespace :bundler do
-
-    # Intelligent Bundler Handling, requires no rollbacks
-    # Each release gets their own bundle seeded from the last built bundle
-    # to make the deploys faster, and the running application doesn't
-    # get its bundle changed out from under it.
 
     set :bundler_opts, %w(--deployment --no-color --quiet)
     set(:bundler_exec) { base_ruby_path + "/bin/bundle" }
@@ -22,13 +22,17 @@ Capistrano::Configuration.instance(:must_exist).load do
     set :bundler_binstubs, true
     set :bundler_clean, true
     set :rake, "bundle exec rake"
-
+    # @readme
+    # Execute bundler install to a specific path
+    #
+    # path  - The path to where you want bundler to install the gems to
+    #
+    # Examples
+    #   bundle('vendor/bundle')
+    #   bundle('/var/www/application/shared/bundle')
+    #
     def bundle(path=nil)
-      # Don't bother if there's no gemfile.
-      # optionally do it as a specific user to avoid permissions problems
-      # do as much as possible in a single 'run' for speed.
-      # had to remove the bundle check in order to always create the binstubs
-      # use the save_bundle task to 'memorialize' a good bundle
+
       args = bundler_opts.dup
       args << "--path #{path}" unless path.to_s.empty? || bundler_opts.include?("--system")
       args << "--gemfile=#{bundler_file}" unless bundler_file == "Gemfile"

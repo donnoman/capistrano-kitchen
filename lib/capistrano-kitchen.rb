@@ -1,7 +1,7 @@
 require "capistrano_kitchen/version"
 
 # @readme
-# # CapistranoCook
+# # Capistrano Kitchen
 #
 # Ubuntu Provisioning Recipes for Capistrano 3
 #
@@ -9,7 +9,7 @@ require "capistrano_kitchen/version"
 #
 # Add this line to your application's Gemfile:
 #
-#     gem 'capistrano-cook'
+#     gem 'capistrano-kitchen'
 #
 # And then execute:
 #
@@ -17,25 +17,29 @@ require "capistrano_kitchen/version"
 #
 # Or install it yourself as:
 #
-#     $ gem install capistrano-cook
+#     $ gem install capistrano-kitchen
 #
 # ## Usage
 #
 # Cook everything:
 #
-#     $ cap staging cook
+#     $ cap cook
 #
 # Cook a specific dish:
 #
-#     $ cap staging cook:nginx_unicorn
+#     $ cap cook:nginx_unicorn
 #
 # ## Contributing
 #
-# 1. Fork it ( http://github.com/<my-github-username>/capistrano-cook/fork )
-# 2. Create your feature branch (`git checkout -b my-new-feature`)
-# 3. Commit your changes (`git commit -am 'Add some feature'`)
-# 4. Push to the branch (`git push origin my-new-feature`)
-# 5. Create new Pull Request
+# * Fork it:
+#     http://github.com/donnoman/capistrano-cook/fork
+# * Create your feature branch:
+#     git checkout -b my-new-feature
+# * Commit your changes:
+#     git commit -am 'Add some feature'
+# * Push to the branch:
+#     git push origin my-new-feature
+# * Create new Pull Request
 module CapistranoKitchen
 
 end

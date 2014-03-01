@@ -17,7 +17,6 @@ test/version_tmp
 tmp
 .ruby-gemset
 .ruby-version
-# Mac OS X hidden files
 .DS_Store
 .rvmrc
 .rbenv-version
